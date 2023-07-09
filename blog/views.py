@@ -16,7 +16,7 @@ def serialize_post(post):
         'image_url': post.image.url if post.image else None,
         'published_at': post.published_at,
         'slug': post.slug,
-        'tags': [serialize_tag(tag) for tag in post.tags.all()],
+        'tags': [serialize_tag_optimized(tag) for tag in post.tags.all()],
         'first_tag_title': post.tags.all()[0].title,
     }
 
@@ -30,7 +30,7 @@ def serialize_post_optimized(post):
         'image_url': post.image.url if post.image else None,
         'published_at': post.published_at,
         'slug': post.slug,
-        'tags': [serialize_tag(tag) for tag in post.tags.all()],
+        'tags': [serialize_tag_optimized(tag) for tag in post.tags.all().annotate(posts_count=Count('posts'))],
         'first_tag_title': post.tags.all()[0].title,
     }
 
@@ -42,6 +42,13 @@ def serialize_tag(tag):
     }
 
 
+def serialize_tag_optimized(tag):
+    return {
+        'title': tag.title,
+        'posts_with_tag': tag.posts_count,
+    }
+
+
 def index(request):
 
     most_popular_posts = Post.objects.popular().prefetch_related('author', 'tags')[:5].fetch_with_comments_count()
@@ -50,7 +57,7 @@ def index(request):
         comments_count=Count('comments', distinct=True)
     ).order_by('published_at').prefetch_related('author', 'tags')[:5]
 
-    popular_tags = Tag.objects.popular()
+    popular_tags = Tag.objects.popular().annotate(posts_count=Count('posts'))
     most_popular_tags = popular_tags[:5]
 
     context = {
@@ -58,7 +65,7 @@ def index(request):
             serialize_post_optimized(post) for post in most_popular_posts
         ],
         'page_posts': [serialize_post_optimized(post) for post in most_fresh_posts],
-        'popular_tags': [serialize_tag(tag) for tag in most_popular_tags],
+        'popular_tags': [serialize_tag_optimized(tag) for tag in most_popular_tags],
     }
     return render(request, 'index.html', context)
 
