@@ -63,7 +63,7 @@ def index(request):
     ).order_by('published_at').prefetch_related('author')
     most_fresh_posts = list(fresh_posts)[-5:]
 
-    popular_tags = Tag.objects.all().annotate(related_posts_count=Count('posts')).order_by('-related_posts_count')
+    popular_tags = Tag.objects.popular()  #all().annotate(related_posts_count=Count('posts')).order_by('-related_posts_count')
     most_popular_tags = popular_tags[:5]
 
     context = {
@@ -103,9 +103,8 @@ def post_detail(request, slug):
         'tags': [serialize_tag(tag) for tag in related_tags],
     }
 
-    all_tags = Tag.objects.all()
-    popular_tags = sorted(all_tags, key=get_related_posts_count)
-    most_popular_tags = popular_tags[-5:]
+    popular_tags = Tag.objects.popular()
+    most_popular_tags = popular_tags[:5]
 
     most_popular_posts = []  # TODO. Как это посчитать?
 
@@ -122,13 +121,12 @@ def post_detail(request, slug):
 def tag_filter(request, tag_title):
     tag = Tag.objects.get(title=tag_title)
 
-    all_tags = Tag.objects.all()
-    popular_tags = sorted(all_tags, key=get_related_posts_count)
-    most_popular_tags = popular_tags[-5:]
+    popular_tags = Tag.objects.popular()
+    most_popular_tags = popular_tags[:5]
 
     most_popular_posts = []  # TODO. Как это посчитать?
 
-    related_posts = tag.posts.all()[:20]
+    related_posts = tag.posts.all().prefetch_related('author')[:20]
 
     context = {
         'tag': tag.title,
