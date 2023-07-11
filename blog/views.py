@@ -51,10 +51,8 @@ def index(request):
 
 
 def post_detail(request, slug):
-    post = Post.objects.filter(slug=slug) \
-        .annotate(likes_count=Count('likes')) \
-        .first()
-    comments = post.comments.prefetch_related('author')
+    post = Post.objects.annotate(likes_count=Count('likes')).get(slug=slug)
+    comments = post.comments.select_related('author')
     serialized_comments = []
     for comment in comments:
         serialized_comments.append({
@@ -92,7 +90,7 @@ def post_detail(request, slug):
 
 
 def tag_filter(request, tag_title):
-    tag = Tag.objects.filter(title=tag_title).annotate(posts_count=Count('posts')).first()
+    tag = Tag.objects.annotate(posts_count=Count('posts')).get(title=tag_title)
 
     most_popular_tags = Tag.objects.popular()[:5].annotate(posts_count=Count('posts'))
 
